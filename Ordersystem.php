@@ -1,168 +1,122 @@
 <?php
 session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['username'])) {
+    header("Location: Loginsystem.php");
+    exit();
+}
+
+// Initialize variables
+$order_message = "";
+$error_message = "";
+
+// Define product prices
+$prices = [
+    "• Adobo" => 30,
+    "• Sinigang" => 40,
+    "• Menudo" => 50,
+    "• Sisig" => 60
+];
+
+// Process form submission
+if ($_SERVER["REQUEST_METHOD"] == "POST") {
+    if (isset($_POST["logout"])) {
+        session_destroy();
+        header("Location: Loginsystem.php");
+        exit();
+    }
+
+    // Validate input
+    $order = $_POST["order"] ?? '';
+    $quantity = filter_input(INPUT_POST, "quantity", FILTER_VALIDATE_INT);
+    $cash = filter_input(INPUT_POST, "cash", FILTER_VALIDATE_FLOAT);
+
+    // Check if input is valid
+    if ($order && $quantity !== false && $cash !== false) {
+        if ($quantity > 0 && array_key_exists($order, $prices)) {
+            $total_cost = $prices[$order] * $quantity;
+            $change = $cash - $total_cost;
+
+            if ($total_cost <= $cash) {
+                $order_message = "<strong>The total cost is {$total_cost} PHP<br>";
+                $order_message .= "Your change is {$change} PHP<br><br></strong>";
+                $order_message .= "Thanks for the order!";
+            } else {
+                $error_message = "Insufficient Balance";
+            }
+        } else {
+            $error_message = "Invalid Quantity or Order";
+        }
+    } else {
+        $error_message = "Invalid Input";
+    }
+}
 ?>
-
-
-
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Order System</title>
+    <!-- Include Tailwind CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <style>
+        h1.custom {
+            font-family: "Times New Roman", Times, serif;
+            font-size: 38px;
+            color: brown;
+        }
+    </style>
 </head>
-<body style="background-color: aquamarine;">
-    <h1 style="color: brown;"> Welcome to Harbi's </h1>
 
-    <!--logout-->
-    <form action="Ordersystem.php" method="post">
-        <input type="submit" name="logout" value="logout">
-    </form>
+<body class="bg-gradient-to-b from-green-200 to-green-100 min-h-screen flex flex-col items-center justify-center">
+    <div class="w-full max-w-lg bg-white shadow-md rounded-lg p-8">
+    <h1 class="custom text-center mb-8" style="font-weight: bold;">Welcome to Harbi's, <?= htmlspecialchars($_SESSION['username'] ?? ''); ?>!</h1>
 
-    <ul>
-        <li>Adobo - 30 PHP</li>
-        <li>Sinigang - 40 PHP</li>
-        <li>Menudo - 50 PHP</li>
-        <li>Sisig - 60 PHP</li>
-    </ul>
-    <form action="orderSystem.php" method="post">
-        <label for="order">Choose your order:</label>
-        <select name="order">
-            <option value="Adobo">Adobo</option>
-            <option value="Sinigang">Sinigang</option>
-            <option value="Menudo">Menudo</option>
-            <option value="Sisig">Sisig</option>
-        </select><br><br>
-        <label for="quantity">Quantity:</label>
-        <input type="text" name="quantity"><br><br>
-        <label for="cash">Cash:</label>
-        <input type="text" name="cash"><br><br>
-        <input type="submit" value="Submit">
+        <form action="ordersystem.php" method="post" class="mb-6">
+            <ul>
+                <?php if(isset($prices)): ?>
+                    <?php foreach ($prices as $item => $price): ?>
+                        <li class="flex justify-between items-center text-gray-800">
+                            <span class="font-bold"><?= htmlspecialchars($item) ?></span>
+                            <span><?= $price ?> PHP</span>
+                        </li>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </ul>
+          <br>
+            <label for="order" class="block mb-2 text-gray-800">Choose your order:</label>
+            <select name="order" id="order" class="w-full border border-gray-300 rounded-md p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+                <option value="">Select an item</option>
+                <?php if(isset($prices)): ?>
+                    <?php foreach ($prices as $item => $price): ?>
+                        <option value="<?= htmlspecialchars($item) ?>" <?= isset($_POST['order']) && $_POST['order'] == $item ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($item) ?>
+                        </option>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </select>
+            <label for="quantity" class="block mb-2 text-gray-800">Quantity:</label>
+            <input type="text" name="quantity" id="quantity" value="<?= isset($_POST['quantity']) ? htmlspecialchars($_POST['quantity']) : '' ?>" class="w-full border border-gray-300 rounded-md p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            <label for="cash" class="block mb-2 text-gray-800">Cash:</label>
+            <input type="text" name="cash" id="cash" value="<?= isset($_POST['cash']) ? htmlspecialchars($_POST['cash']) : '' ?>" class="w-full border border-gray-300 rounded-md p-2 mb-4 focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent">
+            <div class="flex justify-between">
+                <button type="submit" name="submit" class="bg-green-500 hover:bg-green-600 text-white font-semibold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50">Submit</button>
+                <form action="ordersystem.php" method="post">
+                    <button type="submit" name="logout" class="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-full focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 ml-4">Logout</button>
+                </form>
+            </div>
+        </form>
+        <?php if (isset($order_message) && $order_message): ?>
+            <p class="text-green-600 text-center"><?= $order_message ?></p>
+        <?php endif; ?>
+        <?php if (isset($error_message) && $error_message): ?>
+            <p class="text-red-600 text-center"><?= $error_message ?></p>
+        <?php endif; ?>
     </div>
 </body>
+
 </html>
-
-<?php
-
-echo $_SESSION["username"] . "<br>";
-echo $_SESSION["password"] . "<br>";
-
-    if(isset($_POST["logout"])) {
-
-    session_destroy();
-    header("Location:Loginsystem.php");
-    }
-
-
-
-
-    //pricelist
-    $Adobo = 30;
-    $Sinigang = 40;
-    $Menudo = 50;
-    $Sisig = 60;
-    
-    if (empty($_POST["quantity"]) || empty($_POST["cash"])) {
-    } else {
-        //Invalidation if ever they typed a string
-        if (is_numeric($_POST["quantity"]) && is_numeric($_POST["cash"])) {
-            if ($_POST["order"] == "Adobo") {
-                $_POST["order"] = $Adobo;
-            } elseif ($_POST["order"] == "Sinigang") {
-                $_POST["order"] = $Sinigang;
-            } elseif ($_POST["order"] == "Menudo") {
-                $_POST["order"] = $Menudo;
-            } elseif ($_POST["order"] == "Sisig") {
-                $_POST["order"] = $Sisig;
-            }
-            $order = $_POST["order"];
-            $quantity = ($_POST["quantity"]);
-            $cash = ($_POST["cash"]);
-            $total_cost = $order * $quantity;
-            $change = $cash - $total_cost;
-            if ($quantity <= 0) {
-                echo"<br>Invalid";
-            } elseif ($total_cost <= $cash) {
-                echo"<strong><br> The total cost is {$total_cost} <br>";
-                echo"Your change is {$change}<br><br></strong>";
-                echo"Thanks for the order!";
-            } else {
-                echo "<strong><br>Insufficient Balance</strong>  ";
-            }
-        } else {
-            echo "<br>Invalid Input";
-        }
-    }
-
-
-
-
-    $users = array(
-  "user1" => "password1",
-  "user2" => "password2"
-);
-
-if (file_exists('users.json')) {
-  $users = json_decode(file_get_contents('users.json'), true);
-}
-
-$message = "";
-
-if (isset($_POST['login'])) {
-  $username = $_POST['username'];
-  $password = $_POST['password'];
-
-  if (array_key_exists($username, $users) && $users[$username] == $password) {
-    $_SESSION['loggedin'] = true;
-    $_SESSION['username'] = $username;
-  } else {
-    $message = "Invalid username or password.";
-  }
-}
-
-if (isset($_POST['logout'])) {
-  session_unset();
-  session_destroy();
-  header("Location:Loginsystem.php " . $_SERVER['PHP_SELF']);
-  exit();
-}
-
-
-if (isset($_POST['register'])) {
-  $username = $_POST['username'];
-  $password = $_POST['password'];
-
-  if (!array_key_exists($username, $users)) {
-    $users[$username] = $password;
-
-    file_put_contents('users.json', json_encode($users));
-    $message = "Registration successful. Please log in.";
-  } else {
-    $message = "Username already exists.";
-  }
-}
-
-if (isset($_POST['submit'])) {
-  if (isset($_SESSION['loggedin']) && $_SESSION['loggedin'] === true) {
-    $selectedItem = $_POST['food_item'];
-    $quantity = (int)$_POST['quantity'];
-    $cashPaid = (float)$_POST['cash_paid'];
-
-    if (!empty($selectedItem) && $quantity > 0 && $cashPaid >= 0) {
-      $totalCost = $foodItems[$selectedItem] * $quantity;
-
-      if ($cashPaid >= $totalCost) {
-        $change = $cashPaid - $totalCost;
-        $message = "Your order for " . $quantity . " " . $selectedItem . " has been placed! Change due: PHP" . number_format($change, 2);
-      } else {
-        $message = "Insufficient cash. Total cost is PHP" . number_format($totalCost, 2) . ". Please enter a higher amount.";
-      }
-    } else {
-      $message = "Please select a food item, enter a valid quantity, and cash amount.";
-    }
-  } else {
-    $message = "Please log in to place an order.";
-  }
-}
-?>
